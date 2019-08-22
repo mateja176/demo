@@ -85,7 +85,7 @@ const fetchReposCount: express.Handler = function(req, res, next) {
   console.log('fetching repos count for', '"', username, '"');
   fetch(`https://api.github.com/users/${username}`)
     .then(res => res.json())
-    .then(({ public_repos }: User) => public_repos)
+    .then(({ public_repos }: User) => public_repos || -1)
     .then(publicRepos => {
       client.setex(username, 3600, publicRepos.toString());
 
