@@ -47,6 +47,36 @@ interface User {
   updated_at: string;
 }
 
+interface Params {
+  username: string;
+}
+
+const formatCount = ({
+  username,
+  publicRepos,
+}: {
+  publicRepos: User['public_repos'];
+} & Params) =>
+  `<div>Public repos for <i>${username}</i>: <strong>${publicRepos}</strong></div>`;
+
+let cacheMiddleware: express.Handler = function(
+  { params: { username } },
+  res,
+  next,
+) {
+  client.get(username, (err, data) => {
+    if (err) {
+      throw err;
+    } else {
+      if (data) {
+        res.send(formatCount({ username, publicRepos: Number(data) }));
+      } else {
+        next();
+      }
+    }
+  });
+};
+
 const fetchReposCount: express.Handler = function(req, res, next) {
   const {
     params: { username },
@@ -61,15 +91,12 @@ const fetchReposCount: express.Handler = function(req, res, next) {
 
       return publicRepos;
     })
-    .then(
-      publicRepos =>
-        `<div>Public repos for <i>${username}</i>: <strong>${publicRepos}</strong></div>`,
-    )
+    .then(publicRepos => formatCount({ username, publicRepos }))
     .then(repos => res.send(repos))
     .catch(console.error);
 };
 
-app.get('/repos/:username', fetchReposCount);
+app.get('/repos/:username', cacheMiddleware, fetchReposCount);
 
 app.listen(port, () => {
   console.log(`http://localhost:${port}`);
